@@ -201,3 +201,108 @@ INNER JOIN Production.Location l ON i.LocationID = l.LocationID
 INNER JOIN Production.Product p ON p.ProductID = i.ProductID
 GROUP BY l.Name
 ORDER BY l.Name
+USE Northwind
+--1997 Haziran ayýnda yapýlmýþ satýþlar
+SELECT * FROM Orders
+WHERE OrderDate >= '1997-06-01' AND OrderDate < '1997-07-01'
+ORDER BY OrderDate
+
+SELECT * FROM Orders
+WHERE YEAR(OrderDate) = 1997 AND MONTH(OrderDate) = 6 --AND DAY(OrderDate) = 4
+
+USE AdventureWorks
+--WITH TIES : Son ilgili deðer ile ayný deðere sahip olup, sýralamaya top keyword'ü 
+--sebebi ile giremeyen kayýtlarý görmek için kullanýlýr
+SELECT TOP 3 WITH TIES 
+	p.FirstName + ' ' + p.LastName AS Employee, 
+	CONVERT(VARCHAR, e.BirthDate, 103) AS BirthDate, 
+	d.Name AS DepartmentName, 
+	h.StartDate
+FROM HumanResources.Employee e
+INNER JOIN Person.Person p ON e.BusinessEntityID = p.BusinessEntityID
+INNER JOIN HumanResources.EmployeeDepartmentHistory h ON e.BusinessEntityID = h.BusinessEntityID
+INNER JOIN HumanResources.Department d ON d.DepartmentID = h.DepartmentID
+ORDER BY BirthDate ASC
+SET STATISTICS IO OFF --ON
+SET STATISTICS TIME OFF --ON
+--Satýn Alma Ajansý (Purchasing Agent) olan kiþilerin iletiþim numaralarý
+SELECT p.FirstName, p.LastName, h.PhoneNumber, e.EmailAddress 
+FROM Person.Person p
+INNER JOIN Person.PersonPhone h ON p.BusinessEntityID = h.BusinessEntityID
+INNER JOIN Person.BusinessEntityContact b ON b.PersonID = p.BusinessEntityID
+INNER JOIN Person.ContactType c ON c.ContactTypeID = b.ContactTypeID
+INNER JOIN Person.EmailAddress e ON e.BusinessEntityID = p.BusinessEntityID
+WHERE c.Name = 'Purchasing Agent'
+
+SELECT p.FirstName, p.LastName, h.PhoneNumber, e.EmailAddress 
+FROM Person.Person p
+INNER JOIN Person.PersonPhone h ON p.BusinessEntityID = h.BusinessEntityID
+INNER JOIN Person.BusinessEntityContact b ON b.PersonID = p.BusinessEntityID
+INNER JOIN Person.EmailAddress e ON e.BusinessEntityID = p.BusinessEntityID
+WHERE b.ContactTypeID = (SELECT TOP 1 ContactTypeId FROM Person.ContactType WHERE Name = 'Purchasing Agent')
+--AGGREGATE FUNCTION
+USE Northwind
+SELECT COUNT(0) FROM Employees
+SELECT COUNT(0) FROM Products
+SELECT COUNT(*) AS [Count of Orders] FROM Orders
+--Her bir kategoriden kaç ürün var
+SELECT c.CategoryName, COUNT(0) AS [Count] FROM Products p
+INNER JOIN Categories c ON c.CategoryID = p.CategoryID
+GROUP BY c.CategoryName
+ORDER BY [Count] DESC
+
+SELECT TOP 1 
+	FirstName, LastName, BirthDate, GETDATE() AS Now, YEAR(GETDATE()) - YEAR(BirthDate) AS Diff 
+FROM Employees
+
+SELECT TOP 1 
+	FirstName, LastName, YEAR(GETDATE()) - YEAR(BirthDate) AS Diff --DATEDIFF ile deneyin. Bkz: 298 (Ctrl + G)
+FROM Employees
+
+SELECT CONVERT(varchar, CAST(123456 AS Money), 1) AS test
+
+SELECT SUM(YEAR(GETDATE()) - YEAR(BirthDate)) AS Summary FROM Employees
+SELECT SUM(YEAR(GETDATE()) - YEAR(BirthDate)) / COUNT(0) AS Summary FROM Employees
+SELECT AVG(YEAR(GETDATE()) - YEAR(BirthDate)) AS Summary FROM Employees
+--1998 yýlýnda ne kadarlýk satýþ cirosu alýnmýþ
+SELECT SUM(od.UnitPrice * od.Quantity) AS Total
+FROM [Order Details] od
+INNER JOIN Orders o ON o.OrderID = od.OrderID
+WHERE YEAR(o.OrderDate) = 1998
+--1998 yýlýnda hangi müþteri ne kadarlýk sipariþ vermiþ
+SELECT c.CompanyName, SUM(d.Quantity * d.UnitPrice) AS Summary 
+FROM [Order Details] d
+INNER JOIN Orders o ON o.OrderID = d.OrderID
+INNER JOIN Customers c ON c.CustomerID = o.CustomerID
+WHERE YEAR(o.OrderDate) = 1998
+GROUP BY c.CompanyName
+ORDER BY Summary DESC
+--1998 yýlýnda hangi personel ne kadarlýk satýþ yapmýþ
+SELECT e.FirstName, e.LastName, SUM(d.Quantity * d.UnitPrice) AS Summary FROM Employees e
+INNER JOIN Orders o ON o.EmployeeID = e.EmployeeID
+INNER JOIN [Order Details] d ON d.OrderID = o.OrderID
+WHERE YEAR(o.OrderDate) = 1998
+GROUP BY e.FirstName, e.LastName
+ORDER BY Summary DESC
+--Margaret	Peacock, Eastern Connection'dan aldýðý sipariþler ve sipariþ baþýna toplam ücret
+SELECT o.OrderDate, SUM(d.UnitPrice * d.Quantity) AS Summary FROM Orders o
+INNER JOIN [Order Details] d ON o.OrderID = d.OrderID
+WHERE o.CustomerID = (SELECT TOP 1 CustomerID FROM Customers 
+					  WHERE CompanyName = 'Eastern Connection') AND
+	  o.EmployeeID = (SELECT TOP 1 EmployeeID FROM Employees 
+				      WHERE FirstName = 'Margaret' AND LastName = 'Peacock')
+GROUP BY o.OrderDate
+-- sekiz ay önceki ve daha öncesinde alýnmýþ sipariþler
+SELECT * FROM Orders WHERE OrderDate < DATEADD(month,-8,GETDATE()) 
+-- tarih farký
+SELECT DATEDIFF(YEAR, '1988-02-08', GETDATE())
+
+--AdventureWorks;
+--'Road-450 Red, 44' isimli bisiklet hangi depoda kaç tane var ve kaç liralýk ürün var listeleyin
+USE AdventureWorks
+SELECT l.Name, i.Quantity AS [Count], SUM(p.ListPrice * i.Quantity) AS Total 
+FROM Production.ProductInventory i
+INNER JOIN Production.Product p ON i.ProductID = p.ProductID
+INNER JOIN Production.Location l ON l.LocationID = i.LocationID
+WHERE p.Name = 'Road-450 Red, 44'
+GROUP BY l.Name, i.Quantity
