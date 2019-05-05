@@ -306,3 +306,119 @@ INNER JOIN Production.Product p ON i.ProductID = p.ProductID
 INNER JOIN Production.Location l ON l.LocationID = i.LocationID
 WHERE p.Name = 'Road-450 Red, 44'
 GROUP BY l.Name, i.Quantity
+
+USE Northwind
+SELECT ProductName, UnitPrice, UnitsInStock 
+FROM Products
+WHERE CategoryID IN (1,4,8)
+--WHERE CategoryID = 1 OR CategoryID = 4 OR CategoryID = 8
+
+SELECT ProductName, UnitPrice, UnitsInStock, CategoryID 
+FROM Products
+WHERE CategoryID IN (SELECT CategoryID FROM Categories 
+				     WHERE CategoryName IN ('Dairy Products', 'Beverages', 'Seafood'))
+ORDER BY ProductName
+
+SELECT * FROM Categories
+--Hem Nancy hem de Robert'ýn 1996 aralýk ayýnda aldýklarý sipariþler
+SELECT * FROM Orders 
+WHERE YEAR(OrderDate) = 1996 AND MONTH(OrderDate) = 12 AND
+	  EmployeeID IN (SELECT EmployeeID FROM Employees 
+					 WHERE FirstName IN ('nancy', 'robert'))
+--Hem Nancy hem de Robert'ýn 1996 aralýk ayýnda elde ettikleri gelir
+SELECT e.FirstName, e.LastName, SUM(d.Quantity * d.UnitPrice) AS Summary 
+FROM [Order Details] d
+LEFT JOIN Orders o ON o.OrderID = d.OrderID
+LEFT JOIN Employees e ON e.EmployeeID = o.EmployeeID
+WHERE YEAR(OrderDate) = 1996 AND MONTH(OrderDate) = 12 AND 
+	  e.FirstName IN ('nancy', 'Robert')
+GROUP BY e.FirstName, e.LastName
+UNION
+SELECT 'Robert', 'King', 0
+--MIN - MAX
+
+SELECT MAX(UnitPrice) FROM Products
+SELECT MIN(UnitPrice) FROM Products
+--En pahalý ürün
+SELECT ProductName, MAX(UnitPrice) FROM Products
+GROUP BY ProductName -- MAX ve MIN group by ile mantýklý sonuçlar veremiyor
+
+SELECT * FROM Products WHERE UnitPrice = (SELECT MAX(UnitPrice) FROM Products)
+--En ucuz ürün
+SELECT * FROM Products WHERE UnitPrice = (SELECT MIN(UnitPrice) FROM Products)
+
+SELECT * FROM Products WHERE ProductID = 1078
+
+SELECT p.ProductID, s.CompanyName, c.CategoryName, p.ProductName
+FROM Products p
+LEFT JOIN Suppliers s ON s.SupplierID = p.SupplierID
+LEFT JOIN Categories c ON c.CategoryID = p.CategoryID
+--id si verilen ürünün sadece saðlayýcý firma adýný, firmasý yoksa kategori
+--adýný, kategorisi yoksa ürünün adýný getiriniz
+
+--COALESCE parametrik deðerleri içinde getirilen kolon deðeri NULL olmayana kadar bir sonraki 
+--parametreye geçer. 
+SELECT COALESCE(s.CompanyName, c.CategoryName, p.ProductName, 'Deðer Yok') AS Result
+FROM Products p
+LEFT JOIN Suppliers s ON s.SupplierID = p.SupplierID
+LEFT JOIN Categories c ON c.CategoryID = p.CategoryID
+WHERE p.ProductID = 1078
+
+--Saðlayýcýsý olmayan ürünler
+SELECT * FROM Products WHERE SupplierID IS NULL
+--Saðlayýcýsý olan ürünler
+SELECT * FROM Products WHERE SupplierID IS NOT NULL
+--Kategorisi olmayan ürünler
+SELECT * FROM Products WHERE CategoryID IS NULL
+--Kategorisi olan ürünler
+SELECT * FROM Products WHERE CategoryID IS NOT NULL
+SELECT * FROM Products WHERE CategoryID IS NULL AND SupplierID IS NULL
+
+USE AdventureWorks
+SELECT p.FirstName, 
+	   p.LastName, 
+	   CASE e.MaritalStatus WHEN 'M' THEN 'Evli'
+						    WHEN 'S' THEN 'Bekâr'
+							ELSE 'Belirsiz'
+	   END AS MaritalStatus,
+	    e.Gender 
+FROM HumanResources.Employee e
+INNER JOIN Person.Person p ON p.BusinessEntityID = e.BusinessEntityID
+--Northwind'de ürünleri listelerken kategorisi ve/veya saðlayýcýsý olmayan ürünler için
+--TANIMSIZ çýktýsý alýnsýn
+USE Northwind
+SELECT p.ProductName, 
+	   CASE WHEN c.CategoryName IS NULL THEN 'TANIMSIZ'
+		    ELSE c.CategoryName END AS Category,
+	   CASE WHEN s.CompanyName IS NULL THEN 'TANIMSIZ'
+		    ELSE s.CompanyName END AS Company
+FROM Products p
+LEFT JOIN Suppliers s ON s.SupplierID = p.SupplierID
+LEFT JOIN Categories c ON c.CategoryID = p.CategoryID
+
+--Sayfalama
+DECLARE @pageNumber INT
+DECLARE @start INT
+DECLARE @pageSize INT
+SET @pageNumber = 1
+SET @pageSize = 10
+SET @start = (@pageNumber - 1) * @pageSize
+SELECT * FROM Products
+ORDER BY ProductId
+OFFSET @start ROWS FETCH NEXT @pageSize ROWS ONLY
+--AdventureWorks için
+USE AdventureWorks
+--2011 Haziran ayýnda satýlan ürünleri, toplam elde edilen gelir 
+--ile beraber 15'erli sayfalar halinde getiriniz
+SELECT p.Name AS ProductName, SUM(d.LineTotal) AS TotalIncome  --CONVERT(VARCHAR, CAST(SUM(LineTotal) AS MONEY), 1) AS TotalIncome 
+FROM Sales.SalesOrderDetail d
+INNER JOIN Production.Product p ON p.ProductID = d.ProductID
+WHERE d.SalesOrderID IN (SELECT SalesOrderID FROM Sales.SalesOrderHeader
+						 WHERE YEAR(OrderDate) = 2011 AND MONTH(OrderDate) = 6)
+GROUP BY p.Name
+ORDER BY TotalIncome DESC
+OFFSET 0 ROWS FETCH NEXT 15 ROWS ONLY -- OFFSET 15'erli artmalý
+--5 Mayýs 2013 tarihinde yapýlan satýþlarýn dolar cinsinden toplam deðerleri
+--ile beraber müþteri bilgileri ve satýþý yapan personel bilgileri ile ekrana yazdýrýnýz 
+
+--5 Mayýs 2013 tarihinde yapýlan satýþlarda ürünlerde yapýlan toplam indirimleri ürün bazýnda listeleyiniz
