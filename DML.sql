@@ -5,6 +5,7 @@
 	Neslihan : 670,
 	Gülþah : 800,
 	Ayþegül : 557,
+	Gamze : 1000
 	Mazlum : 1001,
 	Ali: 1002,
 	Ahmet: 1003
@@ -421,4 +422,59 @@ OFFSET 0 ROWS FETCH NEXT 15 ROWS ONLY -- OFFSET 15'erli artmalý
 --5 Mayýs 2013 tarihinde yapýlan satýþlarýn dolar cinsinden toplam deðerleri
 --ile beraber müþteri bilgileri ve satýþý yapan personel bilgileri ile ekrana yazdýrýnýz 
 
---5 Mayýs 2013 tarihinde yapýlan satýþlarda ürünlerde yapýlan toplam indirimleri ürün bazýnda listeleyiniz
+SELECT h.SalesOrderID, 
+	   --CASE WHEN h.CurrencyRateID IS NULL THEN h.SubTotal ELSE h.SubTotal * c.EndOfDayRate END,
+	   h.SubTotal * ISNULL(c.EndOfDayRate, 1) AS SubTotalInDollars
+FROM Sales.SalesOrderHeader h
+LEFT JOIN Sales.CurrencyRate c ON c.CurrencyRateID = h.CurrencyRateID
+WHERE YEAR(h.OrderDate) = 2013 AND MONTH(h.OrderDate) = 5 AND DAY(h.OrderDate) = 5
+
+--BKZ: DISTINCT
+--Mayýs 2013 tarihinde yapýlan satýþlarda ürünlerde yapýlan toplam indirimleri ürün bazýnda listeleyiniz
+SELECT p.Name AS ProductName, 
+	   SUM(d.UnitPrice * ISNULL(c.EndOfDayRate, 1) * d.OrderQty) AS Total,
+	   SUM(d.UnitPrice * ISNULL(c.EndOfDayRate, 1) * d.OrderQty * d.UnitPriceDiscount) AS Discount
+FROM Sales.SalesOrderHeader h
+INNER JOIN Sales.SalesOrderDetail d ON h.SalesOrderID = d.SalesOrderID
+INNER JOIN Production.Product p ON d.ProductID = p.ProductID
+LEFT JOIN Sales.CurrencyRate c ON c.CurrencyRateID = h.CurrencyRateID
+WHERE YEAR(h.OrderDate) = 2013 AND MONTH(h.OrderDate) = 5 AND d.UnitPriceDiscount > 0
+GROUP BY p.Name
+ORDER BY Discount DESC
+USE Northwind
+SELECT * FROM Categories
+--INSERT
+INSERT INTO Categories (CategoryName, Description)
+VALUES ('Kitchen Stuff', 'All things that is involved kitchen')
+
+INSERT INTO dbo.Employees 
+(LastName, FirstName, BirthDate, HireDate, City, Country, HomePhone)
+VALUES
+('Perk', 'Can', '1988-02-08', '2011-03-23', 'Ankara', 'Turkey', '672-98-22')
+
+SELECT * FROM dbo.Employees
+--10253
+INSERT INTO dbo.[Order Details] VALUES (10253, 7, 10, 4, 0)-- verileri kolon sýrasý ile birebir ayrý mantýkta olmalýdýr
+
+--DELETE
+--!!!Delete sorgusunda filtrede primary key kullanýmý zorunludur(!)
+DELETE FROM dbo.Categories WHERE CategoryID = 1
+SELECT * FROM dbo.Products WHERE CategoryID = 1
+--DELETE FROM dbo.Categories WHERE CategoryName LIKE '%a%'
+SELECT * FROM dbo.Employees
+DELETE FROM dbo.Employees WHERE FirstName = 'Can' AND LastName = 'Perksson'--XXX
+DELETE FROM dbo.Employees WHERE EmployeeID = 10 --Doðru
+--inþaat -> inþâât
+--UPDATE
+SELECT * FROM dbo.Employees WHERE FirstName = 'Jan' AND LastName = 'Perksson'--11
+SELECT * FROM dbo.Employees WHERE EmployeeID = 11
+UPDATE dbo.Employees SET FirstName = 'Can', LastName = 'Perk'
+WHERE EmployeeID = 11
+
+SELECT * FROM dbo.Employees WHERE EmployeeID = 11
+
+--DELETE FROM dbo.[Order Details]
+--DELETE FROM dbo.Employees WHERE EmployeeID >= 17 AND EmployeeID <> 30
+
+UPDATE dbo.Employees SET LastName = UPPER(LastName)
+UPDATE dbo.Employees SET LastName = FirstName, FirstName = LastName WHERE EmployeeID = 14
