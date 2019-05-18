@@ -14,9 +14,11 @@
 --SQL : Structure Query Language
 --DML : Data Manipulation Language
 	--CRUD Operations : CREATE, READ, UPDATE, DELETE
+	--CRUD: DML => INSERT, SELECT, UPDATE, DELETE
 --DDL : Data Definition Language 
 --DCL : Data Control Language
 --READ
+
 
 SELECT CAST(4 + 5 * (9 - 2) AS VARCHAR) + ' Kiþi'
 
@@ -475,6 +477,6 @@ SELECT * FROM dbo.Employees WHERE EmployeeID = 11
 
 --DELETE FROM dbo.[Order Details]
 --DELETE FROM dbo.Employees WHERE EmployeeID >= 17 AND EmployeeID <> 30
-
+SELECT FirstName, LastName, BirthDate FROM Employees
 UPDATE dbo.Employees SET LastName = UPPER(LastName)
 UPDATE dbo.Employees SET LastName = FirstName, FirstName = LastName WHERE EmployeeID = 14
