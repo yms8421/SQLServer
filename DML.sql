@@ -480,3 +480,29 @@ SELECT * FROM dbo.Employees WHERE EmployeeID = 11
 SELECT FirstName, LastName, BirthDate FROM Employees
 UPDATE dbo.Employees SET LastName = UPPER(LastName)
 UPDATE dbo.Employees SET LastName = FirstName, FirstName = LastName WHERE EmployeeID = 14
+
+INSERT INTO dbo.AllPeople
+(
+    FirstName,
+    LastName,
+    City,
+    Salary
+)
+SELECT FirstName, LastName, COALESCE(City, 'Ankara'), 3000 FROM dbo.Employees
+
+SELECT FirstName, LastName, COALESCE(City, 'Ankara') AS City, 3000 AS Salary
+INTO AllPeople
+FROM dbo.Employees
+
+
+--TODO : CTE Anlat
+	SELECT UPPER(FirstName + ' ' + LastName) AS FullName, HomePhone, 'E' AS PersonType 
+	FROM dbo.Employees WHERE HomePhone IS NOT NULL
+	UNION
+	SELECT UPPER(ContactName), Phone, 'C' 
+	FROM dbo.Customers
+	UNION
+	SELECT UPPER(ContactName), Phone, 'S' FROM dbo.Suppliers
+
+SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;
+SELECT * FROM dbo.Categories
