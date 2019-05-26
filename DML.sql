@@ -494,15 +494,31 @@ SELECT FirstName, LastName, COALESCE(City, 'Ankara') AS City, 3000 AS Salary
 INTO AllPeople
 FROM dbo.Employees
 
+SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;
+SELECT * FROM dbo.Categories
 
---TODO : CTE Anlat
+---Common Table Expression
+;WITH ctePhoneBook AS (
 	SELECT UPPER(FirstName + ' ' + LastName) AS FullName, HomePhone, 'E' AS PersonType 
-	FROM dbo.Employees WHERE HomePhone IS NOT NULL
+	FROM dbo.Employees
 	UNION
 	SELECT UPPER(ContactName), Phone, 'C' 
 	FROM dbo.Customers
 	UNION
 	SELECT UPPER(ContactName), Phone, 'S' FROM dbo.Suppliers
+)
+SELECT * FROM ctePhoneBook c WHERE c.FullName LIKE '%j%'
 
-SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;
-SELECT * FROM dbo.Categories
+;WITH filteredProducts AS 
+(
+	SELECT ProductID Id, ProductName AS Name, UnitPrice 'Price'
+	FROM dbo.Products 
+	WHERE ProductName IN ('Chai', 'Chang', 'Ikura')
+)
+--SELECT * FROM filteredProducts
+
+SELECT f.Name, o.UnitPrice AS [Sale Price], f.Price AS [Current Price] 
+FROM dbo.[Order Details] o
+--INNER JOIN dbo.Products p ON p.ProductID = o.ProductID
+INNER JOIN filteredproducts f ON f.Id = o.ProductID
+WHERE o.UnitPrice >= f.Price

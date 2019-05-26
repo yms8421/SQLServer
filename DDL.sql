@@ -255,7 +255,7 @@ END
 
 GO
 EXEC dbo.spDefineEmployee @firstName = 'Özgür', @lastName = 'Kýlýnçlar', @birthDate = '1994-05-02', @phone = '543 2220910'                         -- varchar(18)
-
+GO
 CREATE TABLE AllPeople
 (
 	Id INT NOT NULL PRIMARY KEY IDENTITY(1,1),
@@ -346,5 +346,91 @@ KILL 55
 SELECT * FROM sys.sysprocesses WHERE open_tran = 1
 
 KILL 60
+GO
+USE Northwind
 
---TRIGGER, AGENT, Common Table Expression
+CREATE TABLE Logs
+(
+	Id UNIQUEIDENTIFIER NOT NULL PRIMARY KEY DEFAULT(NEWID()),
+	Data VARCHAR(300),
+	CreatedDate DATETIME DEFAULT(GETDATE()),
+	CreatedBy VARCHAR(20),
+	IpAddress VARCHAR(15)
+)
+GO
+SELECT * FROM dbo.Logs
+GO
+CREATE TRIGGER OnEmployeeCreated ON Employees
+AFTER INSERT AS
+	DECLARE @name VARCHAR(50)
+	DECLARE @id INT
+	DECLARE @data VARCHAR(300)
+	SELECT @id = Inserted.EmployeeID, @name = Inserted.FirstName + ' ' + Inserted.LastName FROM Inserted
+
+	SET @data = @name + ' was inserted to table : Employees, Record Id : ' + CAST(@id AS VARCHAR(300))
+
+	INSERT INTO Logs (CreatedBy, [Data], IpAddress)
+	VALUES(SUSER_NAME(), @data, dbo.GetIPAddress())--CAST(CONNECTIONPROPERTY('CLIENT_NET_ADDRESS') AS VARCHAR(15)))
+	
+GO
+ALTER TRIGGER OnEmployeeDeleted ON dbo.Employees
+INSTEAD OF DELETE AS
+	DECLARE @name VARCHAR(50)
+	DECLARE @id INT
+	DECLARE @data VARCHAR(300)
+	SELECT @id = Deleted.EmployeeID, @name = Deleted.FirstName + ' ' + Deleted.LastName FROM Deleted
+
+	SET @data = @name + ' was made to delete from table : Employees, Record Id : ' + CAST(@id AS VARCHAR(300))
+		INSERT INTO Logs (CreatedBy, [Data], IpAddress)
+	VALUES(SUSER_NAME(), @data, dbo.GetIPAddress())--CAST(CONNECTIONPROPERTY('CLIENT_NET_ADDRESS') AS VARCHAR(15)))
+	
+GO
+DROP TRIGGER OnEmployeeCreated
+INSERT INTO Employees (FirstName,LastName,BirthDate, HomePhone, City, Country ,HireDate)
+VALUES ('Felipe', 'LUIS', '1987-10-03', '5427820911', 'Madrid', 'Spain', GETDATE())
+
+SELECT SUSER_NAME() --SERVER USER NAME
+SELECT @@SPID --USER SESSION ID
+SELECT CONNECTIONPROPERTY('CLIENT_NET_ADDRESS')
+SELECT * FROM Logs
+SELECT * FROM dbo.Employees
+GO
+--Açýk baðlantý listesi
+CREATE FUNCTION GetIPAddress()
+RETURNS VARCHAR(15)
+AS BEGIN
+	DECLARE @ip VARCHAR(15)
+	SELECT @ip = client_net_address FROM sys.dm_exec_connections
+	WHERE session_id = @@SPID
+	IF @ip = '<local machine>'
+	BEGIN
+		SET @ip = '127.0.0.1'
+	END
+	RETURN @ip
+END
+--DECLARE @name VARCHAR(50)
+--DECLARE @id INT
+--SELECT @id = EmployeeID, @name = FirstName + ' ' + LastName FROM dbo.Employees WHERE EmployeeID = 1
+--PRINT @name
+--PRINT @id
+
+SELECT dbo.GetIPAddress()
+--Kullanýcýya trigger kullanma hakký verildi
+USE master
+GRANT VIEW SERVER STATE TO student;
+USE Northwind
+DELETE FROM Employees WHERE EmployeeId = 96
+
+--AGENT
+BACKUP DATABASE Northwind
+
+DECLARE @path VARCHAR(100)
+DECLARE @date VARCHAR(20)
+SET @date = REPLACE(convert(varchar, getdate(), 120), ':', '_')
+SET @path = 'C:\Backup\Northwind' + @date + '.bak'
+
+BACKUP DATABASE Northwind
+TO DISK=@path
+WITH FORMAT,
+  DESCRIPTION = 'Buraya özel not yazýlýr',
+  NAME = 'Full Back Up'
